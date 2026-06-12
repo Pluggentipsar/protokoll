@@ -10,7 +10,10 @@ def main() -> int:
     )
     sub = parser.add_subparsers(dest="cmd", required=True)
     sub.add_parser("fetch", help="Ladda ned nya protokoll-PDF:er")
-    sub.add_parser("diagnose", help="Visa vad fetch ser på seedsidorna (felsökning)")
+    p_diag = sub.add_parser(
+        "diagnose", help="Visa vad fetch ser på en sida (felsökning)"
+    )
+    p_diag.add_argument("url", nargs="*", help="Valfria URL:er; annars seedsidorna")
     p_convert = sub.add_parser("convert", help="Konvertera PDF:er till markdown")
     p_convert.add_argument("--force", action="store_true", help="Konvertera om allt")
     sub.add_parser("index", help="Bygg ärendeindex (JSONL + SQLite FTS)")
@@ -25,7 +28,7 @@ def main() -> int:
     if args.cmd == "diagnose":
         from . import diagnose
 
-        return diagnose.run()
+        return diagnose.run(args.url or None)
     if args.cmd == "convert":
         from . import convert
 
