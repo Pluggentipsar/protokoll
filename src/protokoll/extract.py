@@ -49,12 +49,35 @@ def clean(text: str) -> str:
     return text.strip()
 
 
+# Återkommande sidhuvud/sidfot som ska bort ur ärendetexten (förorenar både
+# beslutsfältet och fritextsökningen).
+_NOISE = re.compile(r"^(?:justerandes sign|utdragsbestyrkande|se protokollets sista sida\.?)$", re.I)
+_HEADER = re.compile(r"^sammanträdesprotokoll\**\s*barn- och utbildningsnämnden", re.I)
+_PAGENUM = re.compile(r"^\d{1,3}$")
+_DATELINE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
+
+def strip_boilerplate(text: str) -> str:
+    out = []
+    for line in text.splitlines():
+        s = line.strip().strip("*").strip()
+        if s and (
+            _NOISE.match(s)
+            or _HEADER.match(s)
+            or _PAGENUM.match(s)
+            or _DATELINE.match(s)
+        ):
+            continue
+        out.append(line)
+    return clean("\n".join(out))
+
+
 def split_arenden(body: str) -> list[dict]:
     matches = list(SECTION_RE.finditer(body))
     arenden = []
     for i, m in enumerate(matches):
         end = matches[i + 1].start() if i + 1 < len(matches) else len(body)
-        text = clean(body[m.start() : end])
+        text = strip_boilerplate(body[m.start() : end])
         rubrik = m.group(2).strip().strip("*# ").strip()
         # Rubriken kan ligga på raden efter §-numret.
         if not rubrik:
