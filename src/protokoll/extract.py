@@ -12,15 +12,23 @@ import sqlite3
 
 from . import config
 
-# Matchar t.ex. "## § 45 Skolskjutsreglemente", "**§ 45** Rubrik", "§45 Rubrik"
-SECTION_RE = re.compile(
-    r"^(?:#{1,6}\s*|\*\*\s*)?§\s*(\d+)\b[*\s.:-]*(.*)$", re.MULTILINE
-)
-DNR_RE = re.compile(r"\b(?:Dnr|Diarienummer)[:.]?\s*([A-ZÅÄÖ]{2,5}[ /]?\d{4}[/:-]\d+)", re.IGNORECASE)
+# Ärenderubrik. Tolerant prefix så både gamla mallen ("## § 45 Rubrik",
+# "**§ 45** Rubrik") och nya mallen ("## **§ 46**") fångas. Innehålls-
+# tabellens rader börjar med "|" och matchas alltså inte (de är inte ärenden).
+SECTION_RE = re.compile(r"^[ \t#*]*§[ \t*]*(\d+)\b[ \t*.:-]*(.*)$", re.MULTILINE)
+# Barn- och utbildningsnämndens diarienummer: "BUN 2025/123" (gamla) och
+# "Bun/2025:172" (nya). Letar inte efter "Dnr"-prefix eftersom nya mallen
+# saknar det. BUN-ankaret undviker falska träffar på t.ex. "SOU 2025:8".
+DNR_RE = re.compile(r"\bBUN[ /]?(\d{4})[:/](\d+)", re.IGNORECASE)
 BESLUT_RE = re.compile(
     r"(?:^|\n)\s*(?:#{1,6}\s*)?(?:\*\*)?\s*(?:Beslut|Barn- och utbildningsnämndens beslut|Nämndens beslut)\s*(?:\*\*)?\s*\n(.*?)(?=\n\s*(?:#{1,6}\s*)?(?:\*\*)?\s*(?:Reservation|Protokollsanteckning|Ärende|Sammanfattning|Beslutsmotivering|Skäl|Yrkanden|§)\b|\Z)",
     re.DOTALL,
 )
+
+
+def find_dnr(text: str) -> str | None:
+    m = DNR_RE.search(text)
+    return f"Bun/{m.group(1)}:{m.group(2)}" if m else None
 
 
 def parse_frontmatter(text: str) -> tuple[dict, str]:
@@ -57,13 +65,13 @@ def split_arenden(body: str) -> list[dict]:
                     break
         # PDF-extraktionen kan slå ihop rubrikraden med Dnr-raden under.
         rubrik = re.sub(r"[,.\s]*\b(?:Dnr|Diarienummer)\b.*$", "", rubrik).strip()
-        dnr = DNR_RE.search(text)
+        dnr = find_dnr(text)
         beslut = BESLUT_RE.search(text)
         arenden.append(
             {
                 "paragraf": int(m.group(1)),
                 "rubrik": rubrik,
-                "dnr": dnr.group(1) if dnr else None,
+                "dnr": dnr,
                 "beslut": clean(beslut.group(1))[:2000] if beslut else None,
                 "text": text,
             }

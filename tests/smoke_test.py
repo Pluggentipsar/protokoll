@@ -43,7 +43,7 @@ def main() -> int:
     ]
     assert [r["paragraf"] for r in rows] == [41, 42, 43], f"fel §: {rows}"
     skolskjuts = rows[1]
-    assert skolskjuts["dnr"] == "BUN 2025/123", f"dnr: {skolskjuts['dnr']}"
+    assert skolskjuts["dnr"] == "Bun/2025:123", f"dnr: {skolskjuts['dnr']}"
     assert "att anta reviderat skolskjutsreglemente" in (skolskjuts["beslut"] or "")
     budget = rows[2]
     assert "åtgärdsplan" in (budget["beslut"] or ""), f"beslut: {budget['beslut']}"
