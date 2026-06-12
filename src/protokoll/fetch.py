@@ -15,6 +15,7 @@ import re
 import sys
 import time
 import unicodedata
+from datetime import date
 from urllib.parse import parse_qs, unquote, urljoin, urlparse, urlsplit
 
 import httpx
@@ -22,7 +23,9 @@ from bs4 import BeautifulSoup
 
 from . import config
 
-DATE_RE = re.compile(r"(20\d{2})[-_. ]?(\d{2})[-_. ]?(\d{2})")
+# Kräv riktiga avgränsare så vi inte nappar på siffersjok i SiteVisions
+# numeriska URL-id:n. Datumet i länktexten är t.ex. "2024-02-20".
+DATE_RE = re.compile(r"(20\d{2})[-_.\s](\d{2})[-_.\s](\d{2})")
 
 
 def slugify(text: str) -> str:
@@ -49,8 +52,14 @@ def is_pdf_link(href: str) -> bool:
 
 
 def extract_date(url: str, text: str) -> str | None:
-    m = DATE_RE.search(unquote(url)) or DATE_RE.search(text)
-    return "-".join(m.groups()) if m else None
+    """Plockar ett rimligt mötesdatum. Läser länktexten först (renast),
+    sen URL:en, och tar första träff som är ett giltigt kalenderdatum."""
+    for source in (text, unquote(url)):
+        for m in DATE_RE.finditer(source):
+            y, mo, d = (int(g) for g in m.groups())
+            if 2000 <= y <= date.today().year + 1 and 1 <= mo <= 12 and 1 <= d <= 31:
+                return f"{y:04d}-{mo:02d}-{d:02d}"
+    return None
 
 
 def crawl(client: httpx.Client, namnd: str, root_url: str) -> dict[str, str]:
