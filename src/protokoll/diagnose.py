@@ -49,7 +49,7 @@ def _inspect(client: httpx.Client, url: str) -> None:
 
 
 def run(urls: list[str] | None = None) -> int:
-    targets = urls or [s for seeds in config.SEEDS.values() for s in seeds]
+    targets = urls or list(config.NAMND_ROTSIDOR.values())
     client = httpx.Client(
         headers={"User-Agent": config.USER_AGENT}, follow_redirects=True, timeout=30
     )

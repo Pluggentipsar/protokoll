@@ -16,14 +16,19 @@ USER_AGENT = (
     "kontakt: utbildningsforvaltningen Jonkopings kommun)"
 )
 
-# Sidor som genomsöks efter protokoll-PDF:er. Lägg till fler nämnder här.
-SEEDS: dict[str, list[str]] = {
-    "Barn- och utbildningsnämnden": [
+# Nämndens arkivrotsida. fetch crawlar mappträdet (år -> månad -> PDF) under
+# denna sökväg. Lägg till fler nämnder här – samma logik gäller alla.
+NAMND_ROTSIDOR: dict[str, str] = {
+    "Barn- och utbildningsnämnden": (
         "https://www.jonkoping.se/kommun--politik/kommunens-organisation/"
-        "politiska-namnder/barn--och-utbildningsnamnden",
-        "https://www.jonkoping.se/kommun--politik/anslagstavla-for-jonkopings-kommun",
-    ],
+        "politiska-namnder/barn--och-utbildningsnamnden"
+    ),
 }
 
-# Länktext/filnamn måste matcha detta för att laddas ned.
+# Länktext/filnamn måste matcha detta för att en PDF ska laddas ned.
+# Håller hämtningen till protokoll (inte reglemente, kallelser, tjänsteskrivelser).
 PROTOKOLL_PATTERN = r"protokoll"
+
+# Skyddsräcken för crawlningen.
+MAX_SIDOR = 500
+PAUS_SEKUNDER = 0.4
