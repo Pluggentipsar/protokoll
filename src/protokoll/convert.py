@@ -52,7 +52,7 @@ def run(force: bool = False) -> int:
             continue
         meta = by_file.get(pdf_path.name, {"fil": pdf_path.name})
         body = pdf_to_markdown(pdf_path)
-        md_path.write_text(frontmatter(meta) + body)
+        md_path.write_text(frontmatter(meta) + body, encoding="utf-8")
         converted += 1
         print(f"Konverterade: {md_path.name}")
     print(f"Klart: {converted} konverterade, {skipped} redan klara.")

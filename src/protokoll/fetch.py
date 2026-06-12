@@ -101,14 +101,15 @@ def crawl(client: httpx.Client, namnd: str, root_url: str) -> dict[str, str]:
 
 def load_manifest() -> dict:
     if config.MANIFEST.exists():
-        return json.loads(config.MANIFEST.read_text())
+        return json.loads(config.MANIFEST.read_text(encoding="utf-8"))
     return {}
 
 
 def save_manifest(manifest: dict) -> None:
     config.MANIFEST.parent.mkdir(parents=True, exist_ok=True)
     config.MANIFEST.write_text(
-        json.dumps(manifest, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
+        json.dumps(manifest, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
     )
 
 

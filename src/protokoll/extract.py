@@ -105,7 +105,7 @@ def run() -> int:
     config.INDEX_DIR.mkdir(parents=True, exist_ok=True)
     rows: list[dict] = []
     for md_path in sorted(config.MD_DIR.glob("*.md")):
-        meta, body = parse_frontmatter(md_path.read_text())
+        meta, body = parse_frontmatter(md_path.read_text(encoding="utf-8"))
         arenden = split_arenden(body)
         if not arenden:
             print(f"VARNING: inga §-ärenden hittade i {md_path.name}")
@@ -121,7 +121,7 @@ def run() -> int:
                     **arende,
                 }
             )
-    with config.ARENDEN_JSONL.open("w") as fh:
+    with config.ARENDEN_JSONL.open("w", encoding="utf-8") as fh:
         for row in rows:
             fh.write(json.dumps(row, ensure_ascii=False) + "\n")
     build_db(rows)

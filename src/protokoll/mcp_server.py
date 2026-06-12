@@ -108,7 +108,7 @@ def hamta_protokoll(fil: str) -> str:
     path = config.MD_DIR / fil
     if not path.is_file() or path.suffix != ".md" or path.parent != config.MD_DIR:
         return f"Hittar inte protokollet {fil!r}."
-    return path.read_text()
+    return path.read_text(encoding="utf-8")
 
 
 def run() -> int:

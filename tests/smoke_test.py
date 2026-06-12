@@ -33,12 +33,13 @@ def main() -> int:
     convert.run(force=True)
     extract.run()
 
-    md = (config.MD_DIR / f"{NAME}.md").read_text()
+    md = (config.MD_DIR / f"{NAME}.md").read_text(encoding="utf-8")
     assert 'namnd: "Barn- och utbildningsnämnden"' in md, "frontmatter saknas"
     assert "Skolskjutsreglemente" in md, "PDF-text saknas i markdown"
 
     rows = [
-        json.loads(line) for line in config.ARENDEN_JSONL.read_text().splitlines()
+        json.loads(line)
+        for line in config.ARENDEN_JSONL.read_text(encoding="utf-8").splitlines()
     ]
     assert [r["paragraf"] for r in rows] == [41, 42, 43], f"fel §: {rows}"
     skolskjuts = rows[1]
