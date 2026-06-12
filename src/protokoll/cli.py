@@ -17,6 +17,7 @@ def main() -> int:
     p_convert = sub.add_parser("convert", help="Konvertera PDF:er till markdown")
     p_convert.add_argument("--force", action="store_true", help="Konvertera om allt")
     sub.add_parser("index", help="Bygg ärendeindex (JSONL + SQLite FTS)")
+    sub.add_parser("stats", help="Visa statistik över ärendeindexet (kvalitetskoll)")
     sub.add_parser("all", help="fetch + convert + index")
     sub.add_parser("serve", help="Starta MCP-servern (stdio)")
     args = parser.parse_args()
@@ -37,6 +38,10 @@ def main() -> int:
         from . import extract
 
         return extract.run()
+    if args.cmd == "stats":
+        from . import stats
+
+        return stats.run()
     if args.cmd == "all":
         from . import convert, extract, fetch
 
