@@ -8,6 +8,7 @@ dependencies = [
     "beautifulsoup4",
     "pymupdf4llm",
     "mcp[cli]",
+    "python-docx",
 ]
 
 [project.scripts]

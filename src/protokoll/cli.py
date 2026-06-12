@@ -33,6 +33,9 @@ def main() -> int:
     sub.add_parser("index", help="Bygg ärendeindex (JSONL + SQLite FTS)")
     sub.add_parser("stats", help="Visa statistik över ärendeindexet (kvalitetskoll)")
     sub.add_parser("export", help="Exportera index till worker/data/arenden.json")
+    sub.add_parser(
+        "sharepoint", help="Generera Word-dokument per protokoll (sharepoint/)"
+    )
     p_search = sub.add_parser("search", help="Sök i protokollen från terminalen")
     p_search.add_argument("fraga", nargs="+", help="Sökord")
     p_search.add_argument("--from", dest="fran", default="", help="Fr.o.m. ÅÅÅÅ-MM-DD")
@@ -66,6 +69,10 @@ def main() -> int:
         from . import export
 
         return export.run()
+    if args.cmd == "sharepoint":
+        from . import sharepoint
+
+        return sharepoint.run()
     if args.cmd == "search":
         from . import search
 

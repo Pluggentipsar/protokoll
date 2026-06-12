@@ -1,84 +1,78 @@
 # protokoll — sökbara nämndprotokoll för Jönköpings kommun
 
 Gör [barn- och utbildningsnämndens protokoll](https://www.jonkoping.se/kommun--politik/kommunens-organisation/politiska-namnder/barn--och-utbildningsnamnden)
-sökbara för en AI-assistent (Copilot, Claude m.fl.), i fyra steg:
+sökbara för utbildningsdirektören. En pipeline hämtar tio års protokoll,
+gör om dem från PDF till strukturerad text, och paketerar dem för leverans
+via **SharePoint + Copilot** (primär väg) eller en MCP-server (upgrade-spår).
 
 ```
-1. fetch    PDF:er hämtas från jonkoping.se        -> data/pdf/  (+ manifest.json)
-2. convert  PDF -> markdown med YAML-frontmatter   -> data/md/
-3. index    markdown delas per ärende (§) och      -> data/index/arenden.jsonl
-            indexeras med SQLite FTS5                 data/index/protokoll.db
-4. serve    MCP-server exponerar sökningen för en AI-assistent
-```
+fetch    PDF:er hämtas (rekursiv crawl av nämndens mappträd)  -> data/pdf/
+convert  PDF -> markdown med YAML-frontmatter (UTF-8)          -> data/md/
+index    markdown delas per ärende (§), extraherar diarienr    -> data/index/
+         och beslutssats, bygger SQLite FTS5 + JSONL
 
-Markdownfilerna i `data/md/` är samtidigt redo att läggas i ett
-SharePoint-bibliotek för en Copilot-agent — formatet är medvetet
-front-end-oberoende.
+Leverans:
+sharepoint  ett Word-dokument per sammanträde   -> sharepoint/   (SharePoint + Copilot)
+export      kompakt JSON för Cloudflare-Workern  -> worker/data/  (MCP, valfritt)
+serve       lokal MCP-server (stdio) för Claude Desktop
+search      provsök i terminalen
+stats       kvalitetskoll av indexet
+```
 
 ## Kom igång
 
 ```bash
 uv venv .venv && uv pip install -p .venv/bin/python -e .
-.venv/bin/protokoll all      # hämta + konvertera + indexera
-.venv/bin/protokoll serve    # starta MCP-servern (stdio)
+.venv/bin/protokoll all          # fetch + convert + index
+.venv/bin/protokoll sharepoint   # generera Word-dokument
 ```
 
-Testa utan nätverk (syntetiskt protokoll genom hela kedjan):
+På Windows: `.venv\Scripts\protokoll`. Testa utan nätverk:
+`.venv/bin/python tests/smoke_test.py`.
 
-```bash
-.venv/bin/python tests/smoke_test.py
-```
+## Leverans till direktören: SharePoint + Copilot
 
-## MCP-verktyg
+1. `protokoll sharepoint` skapar `sharepoint/` med en `.docx` per sammanträde
+   (titel, källa, och per § rubrik/diarienummer/beslut/ärendetext). Word
+   indexeras tillförlitligt av Microsoft 365 Copilot, och den strukturerade
+   datan ger bättre grounding än råa PDF:er.
+2. Skapa ett SharePoint-dokumentbibliotek och ladda upp mappen.
+3. I Copilot Studio: lägg till biblioteket som **Knowledge** i agenten (samma
+   agent som t.ex. Kolada, eller en egen protokoll-agent).
+4. Lägg en rad i agentinstruktionen: använd protokoll-kunskapen för frågor om
+   nämndens beslut, och ange alltid källa.
 
-| Verktyg | Gör |
-|---|---|
-| `sok_protokoll(fraga, fran_datum?, till_datum?)` | Fritextsökning per ärende, med beslutssats och utdrag. Prefixmatchning så "skolskjuts" träffar "skolskjutsreglemente". |
-| `hamta_arende(id)` | Hela texten för ett ärende. |
-| `lista_sammantraden()` | Alla indexerade sammanträden med §-intervall. |
-| `hamta_protokoll(fil)` | Ett helt protokoll som markdown. |
+Personuppgifterna stannar inom kommunens tenant — bättre dataskyddsläge än ett
+öppet API. Protokollen är allmänna handlingar men kan innehålla personuppgifter;
+håll åtkomsten intern och stäm av med dataskyddsombud innan bredare spridning.
 
-Exempel på klientkonfiguration (Claude Desktop/Code):
+## MCP-server (valfritt upgrade-spår)
 
-```json
-{
-  "mcpServers": {
-    "jonkoping-protokoll": {
-      "command": "/sökväg/till/protokoll/.venv/bin/protokoll",
-      "args": ["serve"]
-    }
-  }
-}
-```
+För strukturerad, exakt sökning som ett *verktyg* bredvid t.ex. Kolada i samma
+samtal. Lokalt (Claude Desktop, stdio): `protokoll serve`. Som remote HTTP för
+Copilot Studio finns en påbörjad Cloudflare Worker i `worker/` (söklogik klar i
+`worker/src/protokoll.ts`; transport-kopplingen färdigställs vid behov).
+`protokoll export` skapar datafilen Workern bäddar in.
 
-Tanken är att kombinera med en Kolada-MCP: besluten söks här, nyckeltalen
-(kostnad per elev, behörighet, personaltäthet …) hämtas där.
+MCP-verktyg: `sok_protokoll`, `hamta_arende`, `lista_sammantraden`, `hamta_protokoll`.
 
 ## Automatisk uppdatering
 
-`.github/workflows/uppdatera-protokoll.yml` kör pipelinen varje vecka på
-GitHub Actions och committar nya protokoll. Nämnden sammanträder ungefär
-en gång i månaden.
+`.github/workflows/uppdatera-protokoll.yml` kör pipelinen veckovis och committar
+nya protokoll. Nämnden sammanträder ungefär en gång i månaden.
 
 ## Per ärende extraheras
 
-- `paragraf` — §-nummer
-- `rubrik` — ärenderubrik
-- `dnr` — diarienummer (t.ex. `BUN 2025/123`)
-- `beslut` — beslutssatsen ("Barn- och utbildningsnämnden beslutar att …")
-- `text` — hela ärendetexten
-- `namnd`, `datum`, `kalla` — från manifestet/frontmattern
+`paragraf` (§-nummer), `rubrik`, `dnr` (t.ex. `Bun/2025:172`), `beslut`
+(beslutssatsen), `text` (hela ärendet), samt `namnd`/`datum`/`kalla`.
 
 ## Kända begränsningar
 
-- Inskannade PDF:er utan textlager hoppas över med varning (kräver OCR,
-  t.ex. `ocrmypdf` — inte inkopplat ännu).
-- Regexarna för §/Dnr/Beslut är skrivna mot strukturen i kommunens
-  protokoll men bör stämmas av mot ett antal riktiga protokoll och
-  justeras vid behov (`src/protokoll/extract.py`).
-- Protokollen är allmänna handlingar men kan innehålla personuppgifter —
-  håll åtkomsten intern tills en GDPR-bedömning är gjord.
+- Inskannade PDF:er utan textlager hoppas över (kräver OCR, ej inkopplat). Tre
+  gamla protokoll (2016–2018) saknar §-tecken i texten och indexeras inte.
+- §/Dnr/Beslut-regexarna stödjer kommunens gamla och nya (2024→) protokollmall;
+  stäm av vid mallbyten (`src/protokoll/extract.py`).
 
 ## Fler nämnder
 
-Lägg till seedsidor i `SEEDS` i `src/protokoll/config.py`.
+Lägg till nämndens rotsida i `NAMND_ROTSIDOR` i `src/protokoll/config.py`.

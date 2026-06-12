@@ -3,3 +3,7 @@ __pycache__/
 *.pyc
 *.egg-info/
 data/index/protokoll.db
+sharepoint/
+worker/data/arenden.json
+worker/node_modules/
+worker/dist/
