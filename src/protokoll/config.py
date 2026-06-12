@@ -12,8 +12,8 @@ DB_PATH = INDEX_DIR / "protokoll.db"
 ARENDEN_JSONL = INDEX_DIR / "arenden.jsonl"
 
 USER_AGENT = (
-    "protokoll-pipeline/0.1 (kommunintern sökning av nämndprotokoll; "
-    "kontakt: utbildningsförvaltningen Jönköpings kommun)"
+    "protokoll-pipeline/0.1 (kommunintern sokning av namndprotokoll; "
+    "kontakt: utbildningsforvaltningen Jonkopings kommun)"
 )
 
 # Sidor som genomsöks efter protokoll-PDF:er. Lägg till fler nämnder här.
