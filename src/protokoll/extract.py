@@ -51,7 +51,22 @@ def clean(text: str) -> str:
 
 # Återkommande sidhuvud/sidfot som ska bort ur ärendetexten (förorenar både
 # beslutsfältet och fritextsökningen).
-_NOISE = re.compile(r"^(?:justerandes sign|utdragsbestyrkande|se protokollets sista sida\.?)$", re.I)
+_NOISE = re.compile(
+    r"^(?:justerandes sign|utdragsbestyrkande|se protokollets sista sida\.?"
+    r"|sida \d+ av \d+)$",
+    re.I,
+)
+# Beslutssatsen slutar där expedierings-/underlagsavsnitten börjar.
+_BESLUT_END = re.compile(
+    r"\n\s*[_*#]*\s*(?:Beslutet expedieras|Beslutsunderlag|Sändlista"
+    r"|Reservation|Protokollsanteckning)\b",
+    re.I,
+)
+
+
+def trim_beslut(beslut: str) -> str:
+    m = _BESLUT_END.search(beslut)
+    return (beslut[: m.start()] if m else beslut).strip()
 _HEADER = re.compile(r"^sammanträdesprotokoll\**\s*barn- och utbildningsnämnden", re.I)
 _PAGENUM = re.compile(r"^\d{1,3}$")
 _DATELINE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
@@ -95,7 +110,7 @@ def split_arenden(body: str) -> list[dict]:
                 "paragraf": int(m.group(1)),
                 "rubrik": rubrik,
                 "dnr": dnr,
-                "beslut": clean(beslut.group(1))[:2000] if beslut else None,
+                "beslut": trim_beslut(clean(beslut.group(1)))[:2000] if beslut else None,
                 "text": text,
             }
         )
